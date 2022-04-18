@@ -101,3 +101,13 @@ Example:
                 .required_unless_present_any(&[args::FORMAT_GROUP]),
         ])
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_app() {
+        app().debug_assert();
+    }
+}
