@@ -1,3 +1,7 @@
+**Work in Progress**
+
+<hr>
+
 # Brick - A supercharged archiving tool
 
 ## Features
