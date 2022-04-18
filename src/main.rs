@@ -33,7 +33,10 @@ fn main() -> Result<()> {
 
     println!("Using log level {log_level}");
 
-    env_logger::Builder::new().filter(None, log_level).init();
+    env_logger::Builder::new()
+        .filter(None, log_level)
+        .parse_default_env()
+        .init();
 
     match matches.subcommand() {
         Some(("info", _sub_matches)) => todo!(),
