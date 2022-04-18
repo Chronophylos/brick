@@ -41,7 +41,7 @@ pub fn app() -> Command<'static> {
                 .visible_alias("i")
                 .about("Display info on an archive")
                 .arg_required_else_help(true),
-            pack_command(),
+            pack(),
             Command::new("unpack")
                 .visible_alias("u")
                 .about("Unpack an archive")
@@ -49,7 +49,7 @@ pub fn app() -> Command<'static> {
         ])
 }
 
-fn pack_command() -> Command<'static> {
+fn pack() -> Command<'static> {
     Command::new("pack")
         .visible_alias("p")
         .about("Pack files and directories into an archive")
