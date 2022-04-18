@@ -10,17 +10,19 @@
 - Support nested archives (eg. tar in gzip)
 - Multithreaded
 
-### Supported formats
+### Formats
 
-- lzma
-- gzip
-- bzip
-- bzip2
-- zip
-- rar
-- tar
-- bzip
-- zlib / zstandard
+| Format | Supported |
+| --- | --- |
+| lzma | 🚧 | 
+| gzip | 🚧 | 
+| bzip | ❎ | 
+| bzip2 | ❎ | 
+| zip | 🚧 | 
+| rar | ❎ | 
+| tar | ✅ | 
+| bzip | ❎ | 
+| zlib / zstandard | ❎ | 
 
 
 ## Examples
