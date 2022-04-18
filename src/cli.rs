@@ -1,5 +1,8 @@
 use brick::ArchiveFormat;
 use clap::{command, Arg, ArgGroup, Command};
+use once_cell::sync::Lazy;
+
+use crate::fl;
 
 pub mod args {
     pub static COMPRESSION_LEVEL: &str = "compression level";
@@ -11,6 +14,8 @@ pub mod args {
 }
 
 pub fn app() -> Command<'static> {
+    static QUIET_HELP: Lazy<String> = Lazy::new(|| fl!("cli-arg-quiet-help"));
+
     command!()
         .subcommand_required(true)
         .help_expected(true)
@@ -18,7 +23,7 @@ pub fn app() -> Command<'static> {
             Arg::new("quiet")
                 .short('q')
                 .long("quiet")
-                .help("reduce output. Multiple occurences make output less informative")
+                .help(QUIET_HELP.as_str())
                 .long_help(
 "Decrease the logging level. The default level is info. Each occurrance decreases the level from info to warn to error to nothing"
                 )

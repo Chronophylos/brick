@@ -4,13 +4,41 @@ use std::{path::PathBuf, str::FromStr};
 
 use clap::ArgMatches;
 use cli::args;
+use i18n_embed::{
+    fluent::{fluent_language_loader, FluentLanguageLoader},
+    DesktopLanguageRequester,
+};
 use itertools::Itertools;
 use log::{debug, error, info, LevelFilter};
+use once_cell::sync::Lazy;
+use rust_embed::RustEmbed;
 
 use brick::{
     error::{Error, Result},
     ArchiveFormat, CompressionLevel,
 };
+
+#[derive(RustEmbed)]
+#[folder = "i18n/"]
+struct Localizations;
+
+macro_rules! fl {
+    ($message_id:literal) => {{
+        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id)
+    }};
+
+    ($message_id:literal, $($args:expr),*) => {{
+        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id, $($args), *)
+    }};
+}
+pub(crate) use fl;
+
+pub(crate) static LANGUAGE_LOADER: Lazy<FluentLanguageLoader> = Lazy::new(|| {
+    let loader = fluent_language_loader!();
+    let requested_languages = DesktopLanguageRequester::requested_languages();
+    let _result = i18n_embed::select(&loader, &Localizations, &requested_languages);
+    loader
+});
 
 fn main() -> Result<()> {
     let app = cli::app();
