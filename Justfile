@@ -4,7 +4,7 @@ alias c := check
 cargo := `command -v cargo`
 
 check:
-    {{cargo}} +nightly clippy
+    {{cargo}} clippy
 
 test:
     {{cargo}} nextest run
