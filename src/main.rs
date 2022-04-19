@@ -170,7 +170,10 @@ fn do_pack(
             &new_target_name,
         )?;
 
-        fs::remove_file(&target_name).map_err(Error::RemoveOldArchive)?;
+        fs::remove_file(&target_name).map_err(|source| Error::RemoveOldArchive {
+            source,
+            path: target_name.to_string(),
+        })?;
 
         target_name = new_target_name;
     }
@@ -189,7 +192,10 @@ where
 {
     trace!("Creating archive file {}", output_path.as_ref().display());
 
-    let file = File::create(&output_path).map_err(Error::CreateArchiveFile)?;
+    let file = File::create(&output_path).map_err(|source| Error::CreateArchiveFile {
+        source,
+        path: output_path.as_ref().display().to_string(),
+    })?;
 
     info!(
         "Packing {:?} as {format} with compression level {level} to {}",
