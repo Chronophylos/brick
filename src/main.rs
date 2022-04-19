@@ -54,8 +54,6 @@ fn main() -> color_eyre::eyre::Result<()> {
         _ => unreachable!(),
     };
 
-    println!("Using log level {log_level}");
-
     env_logger::Builder::new()
         .filter(None, log_level)
         .parse_default_env()
