@@ -17,7 +17,7 @@ cli-pack-compression-help = Specify the compresion level [possible values: auto,
 cli-pack-compression-long-help =
     Specify the compression level from 0..9.
     Default if no value specified or not set is auto. 
-    auto means compression level is decided bytodo!() the format
+    auto means compression level is decided by the format
 
     Example:
     `-c` -> auto
