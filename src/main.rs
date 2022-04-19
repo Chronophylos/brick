@@ -86,7 +86,7 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
             // derive archive format and level from arguments
             debug!("Deriving archive format and level from arguments");
 
-            for (format, level) in values
+            let formats = values
                 .map(|vec| vec.first().copied())
                 .tuples()
                 .map(|(format, level)| {
@@ -101,10 +101,9 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
                             .unwrap_or_default(),
                     ))
                 })
-                .collect::<Result<Vec<_>>>()?
-            {
-                info!("Packing as {format} with compression level {level}")
-            }
+                .collect::<Result<Vec<_>>>()?;
+
+            do_pack(formats)?;
         } else {
             unreachable!("");
         }
@@ -113,17 +112,25 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
         debug!("Deriving archive format from output file name");
 
         let path = sub_matches.value_of_t_or_exit::<PathBuf>(args::OUTPUT_FILE);
-        let level = CompressionLevel::Auto;
 
-        for format in path
+        let formats = path
             .file_name()
             .unwrap()
             .to_string_lossy()
             .split('.')
             .flat_map(ArchiveFormat::try_from_ext)
-        {
-            info!("Packing as {format} with compression level {level}")
-        }
+            .map(|format| (format, CompressionLevel::Auto))
+            .collect_vec();
+
+        do_pack(formats)?;
+    }
+
+    Ok(())
+}
+
+fn do_pack(formats: Vec<(ArchiveFormat, CompressionLevel)>) -> Result<()> {
+    for (format, level) in formats {
+        info!("Packing as {format} with compression level {level}")
     }
 
     Ok(())
