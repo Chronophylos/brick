@@ -2,7 +2,7 @@ use brick::ArchiveFormat;
 use clap::{command, Arg, ArgGroup, Command};
 use once_cell::sync::Lazy;
 
-use crate::fl;
+use crate::macros::fl;
 
 pub mod args {
     pub static COMPRESSION_LEVEL: &str = "compression level";

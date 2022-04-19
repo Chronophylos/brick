@@ -1,4 +1,5 @@
 mod cli;
+mod macros;
 
 use std::{path::PathBuf, str::FromStr};
 
@@ -12,26 +13,17 @@ use itertools::Itertools;
 use log::{debug, error, info, LevelFilter};
 use once_cell::sync::Lazy;
 use rust_embed::RustEmbed;
+use tempfile::NamedTempFile;
 
 use brick::{
     error::{Error, Result},
+    packer::{tar::TarPacker, Packer},
     ArchiveFormat, CompressionLevel,
 };
 
 #[derive(RustEmbed)]
 #[folder = "i18n/"]
 struct Localizations;
-
-macro_rules! fl {
-    ($message_id:literal) => {{
-        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id)
-    }};
-
-    ($message_id:literal, $($args:expr),*) => {{
-        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id, $($args), *)
-    }};
-}
-pub(crate) use fl;
 
 pub(crate) static LANGUAGE_LOADER: Lazy<FluentLanguageLoader> = Lazy::new(|| {
     let loader = fluent_language_loader!();
@@ -81,6 +73,8 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
+    let paths = sub_matches.values_of_t_or_exit::<PathBuf>(args::INPUT_FILES);
+
     if sub_matches.occurrences_of(args::FORMAT_GROUP) > 0 {
         if let Some(values) = sub_matches.grouped_values_of(args::FORMAT_GROUP) {
             // derive archive format and level from arguments
@@ -103,7 +97,7 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
                 })
                 .collect::<Result<Vec<_>>>()?;
 
-            do_pack(formats)?;
+            do_pack(paths, formats)?;
         } else {
             unreachable!("");
         }
@@ -122,16 +116,51 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
             .map(|format| (format, CompressionLevel::Auto))
             .collect_vec();
 
-        do_pack(formats)?;
+        do_pack(paths, formats)?;
     }
 
     Ok(())
 }
 
-fn do_pack(formats: Vec<(ArchiveFormat, CompressionLevel)>) -> Result<()> {
-    for (format, level) in formats {
-        info!("Packing as {format} with compression level {level}")
+fn do_pack(paths: Vec<PathBuf>, formats: Vec<(ArchiveFormat, CompressionLevel)>) -> Result<()> {
+    let mut iter = formats.into_iter();
+
+    if let Some((format, level)) = iter.next() {
+        let path = pack_files(&paths, format, level)?;
+
+        iter.try_fold(path, |path, (format, level)| {
+            pack_files(&[path], format, level)
+        })?;
     }
 
     Ok(())
+}
+
+fn pack_files(
+    paths: &[PathBuf],
+    format: ArchiveFormat,
+    level: CompressionLevel,
+) -> Result<PathBuf> {
+    let temp_file = NamedTempFile::new()?;
+    let (file, path) = temp_file.keep()?;
+
+    info!(
+        "Packing as {format} with compression level {level} to {}",
+        path.display()
+    );
+
+    let mut packer = match format {
+        ArchiveFormat::Tar => TarPacker::new(&file)?,
+        ArchiveFormat::Zip => todo!(),
+        ArchiveFormat::GZip => todo!(),
+        ArchiveFormat::Lzma => todo!(),
+    };
+
+    for path in paths {
+        packer.add_path(&path)?;
+    }
+
+    packer.finish()?;
+
+    Ok(path)
 }
