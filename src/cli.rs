@@ -8,8 +8,8 @@ pub mod args {
     pub static COMPRESSION_LEVEL: &str = "compression level";
     pub static FORMAT: &str = "format";
     pub static FORMAT_GROUP: &str = "format group";
-    pub static INPUT_FILES: &str = "input files";
-    pub static OUTPUT_FILE: &str = "ouput";
+    pub static INPUT_PATHS: &str = "input paths";
+    pub static OUTPUT_PATH: &str = "output path";
     pub static LOG_LEVEL_GROUP: &str = "log level group";
 }
 
@@ -98,13 +98,13 @@ fn pack() -> Command<'static> {
                 .hide_possible_values(true)
                 .possible_values(["auto", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
                 .ignore_case(true),
-            Arg::new(args::INPUT_FILES)
+            Arg::new(args::INPUT_PATHS)
                 .help(INPUT_HELP.as_str())
                 .required(true)
                 .takes_value(true)
                 .multiple_values(true)
                 .value_name("INPUT"),
-            Arg::new(args::OUTPUT_FILE)
+            Arg::new(args::OUTPUT_PATH)
                 .help(OUTPUT_HELP.as_str())
                 .last(true)
                 .required_unless_present_any(&[args::FORMAT_GROUP]),

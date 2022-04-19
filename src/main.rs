@@ -1,7 +1,13 @@
+#![feature(io_error_more)]
+
 mod cli;
 mod macros;
 
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use clap::ArgMatches;
 use cli::args;
@@ -32,7 +38,9 @@ pub(crate) static LANGUAGE_LOADER: Lazy<FluentLanguageLoader> = Lazy::new(|| {
     loader
 });
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::eyre::Result<()> {
+    color_eyre::install()?;
+
     let app = cli::app();
 
     let matches = app.get_matches();
@@ -73,7 +81,12 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    let paths = sub_matches.values_of_t_or_exit::<PathBuf>(args::INPUT_FILES);
+    let input_paths = sub_matches.values_of_t_or_exit::<PathBuf>(args::INPUT_PATHS);
+    let mut output_path = sub_matches.value_of_t_or_exit::<PathBuf>(args::OUTPUT_PATH);
+
+    if output_path.is_relative() {
+        output_path = Path::new(".").join(output_path);
+    }
 
     if sub_matches.occurrences_of(args::FORMAT_GROUP) > 0 {
         if let Some(values) = sub_matches.grouped_values_of(args::FORMAT_GROUP) {
@@ -97,7 +110,7 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
                 })
                 .collect::<Result<Vec<_>>>()?;
 
-            do_pack(paths, formats)?;
+            do_pack(input_paths, formats, output_path)?;
         } else {
             unreachable!("");
         }
@@ -105,7 +118,7 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
         // derive archive format from output file name
         debug!("Deriving archive format from output file name");
 
-        let path = sub_matches.value_of_t_or_exit::<PathBuf>(args::OUTPUT_FILE);
+        let path = sub_matches.value_of_t_or_exit::<PathBuf>(args::OUTPUT_PATH);
 
         let formats = path
             .file_name()
@@ -116,20 +129,42 @@ fn pack(sub_matches: &ArgMatches) -> Result<()> {
             .map(|format| (format, CompressionLevel::Auto))
             .collect_vec();
 
-        do_pack(paths, formats)?;
+        do_pack(input_paths, formats, output_path)?;
     }
 
     Ok(())
 }
 
-fn do_pack(paths: Vec<PathBuf>, formats: Vec<(ArchiveFormat, CompressionLevel)>) -> Result<()> {
+fn do_pack(
+    input_paths: Vec<PathBuf>,
+    formats: Vec<(ArchiveFormat, CompressionLevel)>,
+    output_path: PathBuf,
+) -> Result<()> {
     let mut iter = formats.into_iter();
 
     if let Some((format, level)) = iter.next() {
-        let path = pack_files(&paths, format, level)?;
+        let path = pack_files(&input_paths, format, level)?;
 
-        iter.try_fold(path, |path, (format, level)| {
+        let final_path = iter.try_fold(path, |path, (format, level)| {
             pack_files(&[path], format, level)
+        })?;
+
+        info!(
+            "Moving {} to {}",
+            final_path.display(),
+            output_path.display()
+        );
+
+        match fs::rename(&final_path, &output_path) {
+            Err(err) if err.kind() == std::io::ErrorKind::CrossesDevices => {
+                fs::copy(&final_path, &output_path).map(|_| ())
+            }
+            result => result,
+        }
+        .map_err(|source| Error::MoveFinalArchive {
+            source,
+            from: final_path.display().to_string(),
+            to: output_path.display().to_string(),
         })?;
     }
 
@@ -141,7 +176,7 @@ fn pack_files(
     format: ArchiveFormat,
     level: CompressionLevel,
 ) -> Result<PathBuf> {
-    let temp_file = NamedTempFile::new()?;
+    let temp_file = NamedTempFile::new().map_err(Error::CreateTempFile)?;
     let (file, path) = temp_file.keep()?;
 
     info!(
@@ -157,7 +192,7 @@ fn pack_files(
     };
 
     for path in paths {
-        packer.add_path(&path)?;
+        packer.add_path(path)?;
     }
 
     packer.finish()?;

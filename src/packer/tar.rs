@@ -3,7 +3,7 @@ use std::{io::Write, path::Path};
 use log::debug;
 use tar::Builder;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 use super::Packer;
 
@@ -32,7 +32,9 @@ where
     fn add_dir(&mut self, path: &Path) -> Result<()> {
         debug!("Adding directory `{}` to archive", path.display());
 
-        self.tar.append_dir_all(path, path)?;
+        self.tar
+            .append_dir_all(path, path)
+            .map_err(Error::TarPacker)?;
 
         Ok(())
     }
@@ -40,7 +42,7 @@ where
     fn add_file(&mut self, path: &Path) -> Result<()> {
         debug!("Adding file `{}` to archive", path.display());
 
-        self.tar.append_path(path)?;
+        self.tar.append_path(path).map_err(Error::TarPacker)?;
 
         Ok(())
     }
@@ -48,7 +50,7 @@ where
     fn finish(self) -> Result<()> {
         debug!("Finishing tar packer");
 
-        self.tar.into_inner()?;
+        self.tar.into_inner().map_err(Error::TarPacker)?;
 
         Ok(())
     }
