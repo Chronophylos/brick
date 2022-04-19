@@ -95,4 +95,13 @@ impl ArchiveFormat {
             _ => Vec::new(),
         }
     }
+
+    pub fn as_ext(&self) -> &'static str {
+        match self {
+            ArchiveFormat::Tar => "tar",
+            ArchiveFormat::Zip => "zip",
+            ArchiveFormat::GZip => "gz",
+            ArchiveFormat::Lzma => "xz",
+        }
+    }
 }

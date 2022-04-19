@@ -4,7 +4,7 @@ mod cli;
 mod macros;
 
 use std::{
-    fs,
+    fs::{self, File},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -16,10 +16,9 @@ use i18n_embed::{
     DesktopLanguageRequester,
 };
 use itertools::Itertools;
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, info, trace, LevelFilter};
 use once_cell::sync::Lazy;
 use rust_embed::RustEmbed;
-use tempfile::NamedTempFile;
 
 use brick::{
     error::{Error, Result},
@@ -141,47 +140,61 @@ fn do_pack(
     output_path: PathBuf,
 ) -> Result<()> {
     let mut iter = formats.into_iter();
+    let mut target_name = output_path
+        .file_name()
+        .and_then(|s| {
+            s.to_string_lossy()
+                .split_once('.')
+                .map(|(left, _)| left.to_string())
+        })
+        .unwrap_or_else(|| String::from("archive"));
+
+    trace!("Archive name: {target_name}");
 
     if let Some((format, level)) = iter.next() {
-        let path = pack_files(&input_paths, format, level)?;
+        debug!("Packing inner most archive");
 
-        let final_path = iter.try_fold(path, |path, (format, level)| {
-            pack_files(&[path], format, level)
-        })?;
+        target_name.push('.');
+        target_name.push_str(format.as_ext());
 
-        info!(
-            "Moving {} to {}",
-            final_path.display(),
-            output_path.display()
-        );
+        pack_files(&input_paths, format, level, &target_name)?;
+    }
 
-        match fs::rename(&final_path, &output_path) {
-            Err(err) if err.kind() == std::io::ErrorKind::CrossesDevices => {
-                fs::copy(&final_path, &output_path).map(|_| ())
-            }
-            result => result,
-        }
-        .map_err(|source| Error::MoveFinalArchive {
-            source,
-            from: final_path.display().to_string(),
-            to: output_path.display().to_string(),
-        })?;
+    for (format, level) in iter {
+        let new_target_name = format!("{target_name}.{}", format.as_ext());
+
+        pack_files(
+            &[PathBuf::from(&target_name)],
+            format,
+            level,
+            &new_target_name,
+        )?;
+
+        fs::remove_file(&target_name).map_err(Error::RemoveOldArchive)?;
+
+        target_name = new_target_name;
     }
 
     Ok(())
 }
 
-fn pack_files(
+fn pack_files<OutputPath>(
     paths: &[PathBuf],
     format: ArchiveFormat,
     level: CompressionLevel,
-) -> Result<PathBuf> {
-    let temp_file = NamedTempFile::new().map_err(Error::CreateTempFile)?;
-    let (file, path) = temp_file.keep()?;
+    output_path: OutputPath,
+) -> Result<()>
+where
+    OutputPath: AsRef<Path>,
+{
+    trace!("Creating archive file {}", output_path.as_ref().display());
+
+    let file = File::create(&output_path).map_err(Error::CreateArchiveFile)?;
 
     info!(
-        "Packing as {format} with compression level {level} to {}",
-        path.display()
+        "Packing {:?} as {format} with compression level {level} to {}",
+        paths,
+        output_path.as_ref().display()
     );
 
     let mut packer = match format {
@@ -197,5 +210,5 @@ fn pack_files(
 
     packer.finish()?;
 
-    Ok(path)
+    Ok(())
 }

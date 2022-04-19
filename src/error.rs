@@ -18,15 +18,11 @@ pub enum Error {
     #[error("Persist Temporary File Error")]
     Persist(#[from] tempfile::PersistError),
 
-    #[error("Could not create temp file")]
-    CreateTempFile(#[source] std::io::Error),
+    #[error("Could not create archive file")]
+    CreateArchiveFile(#[source] std::io::Error),
 
-    #[error("Could not move resulting archive file from {from} to {to}")]
-    MoveFinalArchive {
-        source: std::io::Error,
-        from: String,
-        to: String,
-    },
+    #[error("Could not remove old archive file")]
+    RemoveOldArchive(#[source] std::io::Error),
 
     #[error("Tar Packer Error")]
     TarPacker(#[source] std::io::Error),
