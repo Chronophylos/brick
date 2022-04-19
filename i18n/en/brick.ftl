@@ -16,12 +16,8 @@ cli-pack-format-help = Specify the compression format
 cli-pack-compression-help = Specify the compresion level [possible values: auto, 0-9]
 cli-pack-compression-long-help =
     Specify the compression level from 0..9.
-    Default if no value specified or not set is auto. 
-    auto means compression level is decided by the format
-
-    Example:
-    `-c` -> auto
-    `-c 0` -> 0
+    Default if is auto. 
+    auto means compression level is decided by the format.
 cli-pack-compression-value-name = level
 cli-pack-input-help = files and directories to pack
 cli-pack-output-help = output file
