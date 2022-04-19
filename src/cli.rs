@@ -14,9 +14,16 @@ pub mod args {
 }
 
 pub fn app() -> Command<'static> {
-    static QUIET_HELP: Lazy<String> = Lazy::new(|| fl!("cli-arg-quiet-help"));
+    static ABOUT: Lazy<String> = Lazy::new(|| fl!("cli-about"));
+    static QUIET_HELP: Lazy<String> = Lazy::new(|| fl!("cli-quiet-help"));
+    static QUIET_LONG_HELP: Lazy<String> = Lazy::new(|| fl!("cli-quiet-long-help"));
+    static VERBOSE_HELP: Lazy<String> = Lazy::new(|| fl!("cli-verbose-help"));
+    static VERBOSE_LONG_HELP: Lazy<String> = Lazy::new(|| fl!("cli-verbose-long-help"));
+    static INFO_ABOUT: Lazy<String> = Lazy::new(|| fl!("cli-info-about"));
+    static UNPACK_ABOUT: Lazy<String> = Lazy::new(|| fl!("cli-unpack-about"));
 
     command!()
+        .about(ABOUT.as_str())
         .subcommand_required(true)
         .help_expected(true)
         .args(&[
@@ -24,19 +31,15 @@ pub fn app() -> Command<'static> {
                 .short('q')
                 .long("quiet")
                 .help(QUIET_HELP.as_str())
-                .long_help(
-"Decrease the logging level. The default level is info. Each occurrance decreases the level from info to warn to error to nothing"
-                )
+                .long_help(QUIET_LONG_HELP.as_str())
                 .group(args::LOG_LEVEL_GROUP)
                 .max_occurrences(3)
                 .multiple_occurrences(true),
             Arg::new("verbose")
                 .short('v')
                 .long("verbose")
-                .help("explain what is beeing done. Multiple occurences make output more informative")
-                .long_help(
-"Increase the logging level. The default level is info. Each occurrance increases the level from info to debug to trace"
-                )
+                .help(VERBOSE_HELP.as_str())
+                .long_help(VERBOSE_LONG_HELP.as_str())
                 .group(args::LOG_LEVEL_GROUP)
                 .max_occurrences(2)
                 .multiple_occurrences(true),
@@ -44,20 +47,30 @@ pub fn app() -> Command<'static> {
         .subcommands(vec![
             Command::new("info")
                 .visible_alias("i")
-                .about("Display info on an archive")
+                .about(INFO_ABOUT.as_str())
                 .arg_required_else_help(true),
             pack(),
             Command::new("unpack")
                 .visible_alias("u")
-                .about("Unpack an archive")
+                .about(UNPACK_ABOUT.as_str())
                 .arg_required_else_help(true),
         ])
 }
 
 fn pack() -> Command<'static> {
+    static ABOUT: Lazy<String> = Lazy::new(|| fl!("cli-pack-about"));
+    static FORMAT_HELP: Lazy<String> = Lazy::new(|| fl!("cli-pack-format-help"));
+    static COMPRESSION_HELP: Lazy<String> = Lazy::new(|| fl!("cli-pack-compression-help"));
+    static COMPRESSION_LONG_HELP: Lazy<String> =
+        Lazy::new(|| fl!("cli-pack-compression-long-help"));
+    static COMPRESSION_VALUE_NAME: Lazy<String> =
+        Lazy::new(|| fl!("cli-pack-compression-value-name"));
+    static INPUT_HELP: Lazy<String> = Lazy::new(|| fl!("cli-pack-input-help"));
+    static OUTPUT_HELP: Lazy<String> = Lazy::new(|| fl!("cli-pack-output-help"));
+
     Command::new("pack")
         .visible_alias("p")
-        .about("Pack files and directories into an archive")
+        .about(ABOUT.as_str())
         .arg_required_else_help(true)
         .group(
             ArgGroup::new(args::FORMAT_GROUP)
@@ -68,25 +81,16 @@ fn pack() -> Command<'static> {
             Arg::new(args::FORMAT)
                 .short('f')
                 .long("format")
-                .help("Specify the compression format")
+                .help(FORMAT_HELP.as_str())
                 .possible_values(ArchiveFormat::all())
                 .multiple_occurrences(true)
                 .takes_value(true),
             Arg::new(args::COMPRESSION_LEVEL)
                 .short('c')
                 .long("compression")
-                .help("Specify the compresion level [possible values: auto, 0-9]")
-                .long_help(
-                    "Specify the compression level from 0..9.
-Default if no value specified or not set is auto. 
-auto means compression level is decided bytodo!() the format
-
-Example:
-`-c` -> auto
-`-c 0` -> 0 
-",
-                )
-                .value_name("level")
+                .help(COMPRESSION_HELP.as_str())
+                .long_help(COMPRESSION_LONG_HELP.as_str())
+                .value_name(COMPRESSION_VALUE_NAME.as_str())
                 .requires(args::FORMAT)
                 .multiple_occurrences(true)
                 .takes_value(true)
@@ -95,13 +99,13 @@ Example:
                 .possible_values(["auto", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
                 .ignore_case(true),
             Arg::new(args::INPUT_FILES)
-                .help("files and directories to pack")
+                .help(INPUT_HELP.as_str())
                 .required(true)
                 .takes_value(true)
                 .multiple_values(true)
                 .value_name("INPUT"),
             Arg::new(args::OUTPUT_FILE)
-                .help("output file")
+                .help(OUTPUT_HELP.as_str())
                 .last(true)
                 .required_unless_present_any(&[args::FORMAT_GROUP]),
         ])
